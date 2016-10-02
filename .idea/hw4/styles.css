@@ -25,6 +25,9 @@ tbody th{
     font-weight: bold;
 }
 
+tbody td{
+    font: 14px bold 'aller', sans-serif;
+}
 .aggregate{
     color: #317f19;
 }
@@ -46,6 +49,11 @@ tbody tr:hover {
 
 tbody tr .game {
     background-color: #f0f0f0;
+}
+
+tbody circle {
+    stroke-width: 3px;
+    r:7;
 }
 
 /*tbody tr .game:hover {*/
@@ -103,7 +111,7 @@ header {
 }
 
 .goalBar{
-    opacity:0.6;
+    opacity: 0.6;
 }
 
 .goalCircle{
@@ -124,6 +132,27 @@ header {
     fill: #364e74;
 }
 
+.goalScored {
+    fill: #364e74;
+}
+
+.conceded {
+    fill: #cb181d;
+}
+
+.equal {
+    fill: #b1b1b1;
+}
+
+.barText {
+    font: 30px bold 'aller', sans-serif;
+    color: #ff0000;
+    text-anchor: end;
+}
+
+.testClass {
+    font-size: 30px;
+}
 .loser text {
     text-shadow: 0 1px 0 #fff, 0 -1px 0 #fff, 1px 0 0 #fff, -1px 0 0 #fff;
 }

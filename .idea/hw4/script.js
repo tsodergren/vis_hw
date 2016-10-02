@@ -33,6 +33,9 @@ var goalColorScale = d3.scaleQuantize()
     .domain([-1, 1])
     .range(['#cb181d', '#034e7b']);
 
+var gameColorScale = d3.scaleLinear()
+    .range(['#b1b1b1', '#006666']);
+
 /**json Object to convert between rounds/results and ranking value*/
 var rank = {
     "Winner": 7,
@@ -106,6 +109,14 @@ function createTable() {
     goalScale.domain([0, maxGoals])
         .nice();
 
+   gameScale.domain([0, d3.max(teamData, function (d) {
+       return(d.value.TotalGames)
+   })]);
+
+    gameColorScale.domain([1, d3.max(teamData, function (d) {
+        return(d.value.TotalGames)
+    })]);
+
     //create axis
     goalHeader = d3.select('#goalHeader')
         .append('svg')
@@ -125,43 +136,121 @@ function createTable() {
         .append('tr');
 
     var td = tr.selectAll('td').data(function(d) {
-            return [{'type': 'aggregate', 'vis': 'text', 'value': d.key},
-                    {'type': 'aggregate', 'vis': 'bars', 'value': d.value['Goals Made']},
-                    {'type': 'aggregate', 'vis': 'bars', 'value': d.value.Result},
-                    {'type': 'aggregate', 'vis': 'bars', 'value': d.value.Wins},
-                    {'type': 'aggregate', 'vis': 'bars', 'value': d.value.Losses},
-                    {'type': 'aggregate', 'vis': 'bars', 'value': d.value.TotalGames}];
+            return [{'type': 'aggregate', 'vis': 'teamText', 'value': d.key},
+                    {'type': 'aggregate', 'vis': 'goals', 'value': [d.value['Goals Made'], d.value['Goals Conceded'] ]},
+                    {'type': 'aggregate', 'vis': 'roundText', 'value': d.value.Result.label},
+                    {'type': 'aggregate', 'vis': 'games', 'value': d.value.Wins},
+                    {'type': 'aggregate', 'vis': 'games', 'value': d.value.Losses},
+                    {'type': 'aggregate', 'vis': 'games', 'value': d.value.TotalGames}];
         });
-    tdenter = td.enter()
+
+    tableElements = td.enter()
         .append('td');
 
-    td = tdenter.merge(td);
+    td = tableElements.merge(td);
 
-    //create Team labels
-    teamsCol = tdenter.filter(function (d) {
-            return d.vis == 'text';
+    //goals circles
+    goalCircles = tableElements.filter( function (d) {
+            return d.vis == 'goals';
         })
-        .text(function (d) {
-            return d.value
+        .append('svg')
+        .attr('width', 2*cellWidth)
+        .attr('height', cellHeight)
+        .append('rect')
+        .attr('height',cellHeight)
+        .attr('x', function(d) {
+            return goalScale(d3.min(d.value))
+        })
+        .attr('y',3)
+        .attr('height',14)
+        .attr('width', function(d) {
+            return goalScale(Math.abs(d.value[1]-d.value[0])) - cellBuffer
+        })
+        .style('opacity', 0.6)
+        .style('fill', function(d) {
+            return goalColorScale(d.value[0]-d.value[1])
         });
 
+    console.log(goalCircles)
 
+    tableElements.select('svg')
+        .append('circle')
+        .attr('cx', function (d) {
+            return goalScale(d.value[0])
+        })
+        .attr('cy', function (d) {
+            return cellHeight/2
+        })
+        .attr('class','goalScored');;
 
-    //create bars
-    newbars = tdenter.filter( function (d) {
-        return d.vis == 'bars';
-    });
+    tableElements.select('svg')
+        .append('circle')
+        .attr('cx', function (d) {
+            return goalScale(d.value[1])
+        })
+        .attr('cy', function (d) {
+            return cellHeight/2
+        })
+        .attr('class', function (d) {
+            if (d.value[0] == d.value[1]) {
+                return 'equal';
+            }
+            else {
+                return 'conceded';
+            }
 
-    svg = newbars
+        });
+
+    //games bars
+    newbars = tableElements.filter( function (d) {
+            return d.vis == 'games';
+        })
         .append('svg')
         .attr('width', cellWidth)
-        .attr('height', cellHeight);
+        .attr('height', cellHeight)
+        .append('rect')
+        .attr('height',cellHeight)
+        .attr('width', function (d) {
+            return(gameScale(d.value))
+        })
+        .style('fill', function (d) {
+            return gameColorScale(d.value)
+        });
 
-    rect = svg.append('rect');
+    //text columns
+    tableElements.filter(function (d) {
+        return d.vis == 'teamText';
+    })
+        .text(function (d) {
+            return d.value
+        })
+        .style('color','#317f19')
+        .style('font-weight', 'bold');
 
-    // svg = td.select('svg')
+    tableElements.filter(function (d) {
+        return d.vis == 'roundText';
+    })
+        .text(function (d) {
+            return d.value
+        })
+        .style('font-weight', 'bold');
 
-    console.log(rect.nodes());
+    barText = tableElements.filter(function (d) {
+            return d.vis == 'games'
+        })
+        .select('svg')
+        .append('text')
+        .text(function (d) {
+            return d.value;
+        })
+        .attr('class','barText')
+        .attr('y',14)
+        .attr('x', function (d) {
+            return gameScale(d.value);
+        })
+        .style('font-weight','bold')
+        .style('color','#ffffff');
+
 
 
 
@@ -177,6 +266,7 @@ function createTable() {
 function updateTable() {
 
 // ******* TODO: PART III *******
+
 
 };
 
