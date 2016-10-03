@@ -4,6 +4,8 @@ var teamData;
 /** Global var for list of all elements that will populate the table.*/
 var tableElements;
 
+var tableData;
+
 
 /** Variables to be used when sizing the svgs in the table cells.*/
 var cellWidth = 70,
@@ -129,30 +131,51 @@ function createTable() {
     goalHeader.append('g')
         .call(gAxis);
 
+    tableElements = teamData.slice();
+
+// ******* TODO: PART V *******
+
+}
+
+/**
+ * Updates the table contents with a row for each element in the global variable tableElements.
+ *
+ */
+function updateTable() {
+
+// ******* TODO: PART III *******
+
     // set up table, bind data and create td's
-
-    var tr = d3.select('tbody').selectAll('tr').data(teamData)
-        .enter()
+    var tr = d3.select('tbody').selectAll('tr').data(tableElements);
+    var trEnter = tr.enter()
         .append('tr');
+    tr.exit().remove;
+    tr = tr.merge(trEnter);
 
-    var td = tr.selectAll('td').data(function(d) {
-            return [{'type': 'aggregate', 'vis': 'teamText', 'value': d.key},
-                    {'type': 'aggregate', 'vis': 'goals', 'value': [d.value['Goals Made'], d.value['Goals Conceded'] ]},
-                    {'type': 'aggregate', 'vis': 'roundText', 'value': d.value.Result.label},
-                    {'type': 'aggregate', 'vis': 'games', 'value': d.value.Wins},
-                    {'type': 'aggregate', 'vis': 'games', 'value': d.value.Losses},
-                    {'type': 'aggregate', 'vis': 'games', 'value': d.value.TotalGames}];
+    tr.on('click', function (d,i) {
+            updateList(i);
         });
 
-    tableElements = td.enter()
-        .append('td');
 
-    td = tableElements.merge(td);
+    var td = tr.selectAll('td').data(function(d) {
+        return [{'type': d.value.type, 'vis': 'teamText', 'value': d.key},
+            {'type': d.value.type, 'vis': 'goals', 'value': [d.value['Goals Made'], d.value['Goals Conceded'] ]},
+            {'type': d.value.type, 'vis': 'roundText', 'value': d.value.Result.label},
+            {'type': d.value.type, 'vis': 'gamesTotals', 'value': d.value.Wins},
+            {'type': d.value.type, 'vis': 'gamesTotals', 'value': d.value.Losses},
+            {'type': d.value.type, 'vis': 'gamesTotals', 'value': d.value.TotalGames}];
+    });
+
+    tdenter = td.enter()
+        .append('td');
+console.log(tdenter)
+    td.exit().remove();
+
 
     //goals circles
-    goalCircles = tableElements.filter( function (d) {
-            return d.vis == 'goals';
-        })
+    goalCircles = tdenter.filter( function (d) {
+        return d.vis == 'goals';
+    })
         .append('svg')
         .attr('width', 2*cellWidth)
         .attr('height', cellHeight)
@@ -171,9 +194,8 @@ function createTable() {
             return goalColorScale(d.value[0]-d.value[1])
         });
 
-    console.log(goalCircles)
 
-    tableElements.select('svg')
+    tdenter.select('svg')
         .append('circle')
         .attr('cx', function (d) {
             return goalScale(d.value[0])
@@ -181,9 +203,9 @@ function createTable() {
         .attr('cy', function (d) {
             return cellHeight/2
         })
-        .attr('class','goalScored');;
+        .attr('class','goalScored');
 
-    tableElements.select('svg')
+    tdenter.select('svg')
         .append('circle')
         .attr('cx', function (d) {
             return goalScale(d.value[1])
@@ -202,9 +224,9 @@ function createTable() {
         });
 
     //games bars
-    newbars = tableElements.filter( function (d) {
-            return d.vis == 'games';
-        })
+    newbars = tdenter.filter( function (d) {
+        return d.vis == 'gamesTotals';
+    })
         .append('svg')
         .attr('width', cellWidth)
         .attr('height', cellHeight)
@@ -218,7 +240,7 @@ function createTable() {
         });
 
     //text columns
-    tableElements.filter(function (d) {
+    tdenter.filter(function (d) {
         return d.vis == 'teamText';
     })
         .text(function (d) {
@@ -227,7 +249,7 @@ function createTable() {
         .style('color','#317f19')
         .style('font-weight', 'bold');
 
-    tableElements.filter(function (d) {
+    tdenter.filter(function (d) {
         return d.vis == 'roundText';
     })
         .text(function (d) {
@@ -235,9 +257,9 @@ function createTable() {
         })
         .style('font-weight', 'bold');
 
-    barText = tableElements.filter(function (d) {
-            return d.vis == 'games'
-        })
+    barText = tdenter.filter(function (d) {
+        return d.vis == 'gamesTotals'
+    })
         .select('svg')
         .append('text')
         .text(function (d) {
@@ -251,25 +273,10 @@ function createTable() {
         .style('font-weight','bold')
         .style('color','#ffffff');
 
-
-
-
-
-// ******* TODO: PART V *******
-
-}
-
-/**
- * Updates the table contents with a row for each element in the global variable tableElements.
- *
- */
-function updateTable() {
-
-// ******* TODO: PART III *******
-
+    td = tdenter.merge(td);
+    console.log(td)
 
 };
-
 
 /**
  * Collapses all expanded countries, leaving only rows for aggregate values per country.
@@ -289,6 +296,15 @@ function collapseList() {
 function updateList(i) {
 
     // ******* TODO: PART IV *******
+
+    //splice game information for selected team
+
+    tableElements = teamData.slice();
+    t = teamData[i].value.games;
+    tableElements.splice.apply(tableElements, [i+1, 0].concat(t))
+
+
+    updateTable();
 
 
 }
