@@ -4,7 +4,9 @@ var teamData;
 /** Global var for list of all elements that will populate the table.*/
 var tableElements;
 
-var tableData;
+var sortColumn = -1;
+var sortDir = 'descending';
+var sortColumnNames = ['key','value.'];
 
 
 /** Variables to be used when sizing the svgs in the table cells.*/
@@ -135,6 +137,63 @@ function createTable() {
 
 // ******* TODO: PART V *******
 
+    tHeader = d3.select('thead').select('tr').selectAll(['th','td']);
+    tHeader.on('click', function (d,i) {
+        sortTable(i);
+    });
+
+}
+
+/**
+ * Sorts table by selected column
+ *
+ */
+function sortTable(i) {
+    collapseList();
+    if (sortDir == 'ascending') {
+        tableElements.sort(function (a, b) {
+            return sortFun(b, a)
+        })
+        sortDir = 'descending'
+    }
+    else {
+        tableElements.sort(function (a, b) {
+            return sortFun(a, b)
+        })
+        sortDir = 'ascending'
+    }
+
+    updateTable();
+    sortColumn = i;
+
+    function sortFun(a,b) {
+        switch (i) {
+            case 0:
+                a = a.key.toUpperCase();
+                b = b.key.toUpperCase();
+                if (a < b) {
+                    return -1;
+                }
+                else {
+                    return 1;
+                }
+                break;
+            case 1:
+                return a.value['Goals Made'] - b.value['Goals Made'];
+                break;
+            case 2:
+                return a.value.Result.ranking - b.value.Result.ranking;
+                break;
+            case 3:
+                return a.value.Wins - b.value.Wins;
+                break;
+            case 4:
+                return a.value.Losses - b.value.Losses;
+                break;
+            case 5:
+                return a.value.TotalGames - b.value.TotalGames;
+        }
+    };
 }
 
 /**
@@ -153,7 +212,9 @@ function updateTable() {
     tr = tr.merge(trEnter);
 
     tr.on('click', function (d,i) {
-            updateList(i);
+            if (d.value.type=='aggregate') {
+                updateList(i);
+            }
         });
 
 
@@ -168,45 +229,79 @@ function updateTable() {
 
     tdenter = td.enter()
         .append('td');
-console.log(tdenter)
+    td = tdenter.merge(td);
+
     td.exit().remove();
 
 
-    //goals circles
-    goalCircles = tdenter.filter( function (d) {
+    //goals rectangles
+    newGoalRects = tdenter.filter( function (d) {
         return d.vis == 'goals';
     })
         .append('svg')
         .attr('width', 2*cellWidth)
         .attr('height', cellHeight)
-        .append('rect')
+        .append('rect');
+
+    allGoalRects = td.filter( function (d) {
+        return d.vis == 'goals'
+    });
+
+    allGoalRects.select('svg').select('rect')
+        .attr('class','goalBar')
         .attr('height',cellHeight)
         .attr('x', function(d) {
             return goalScale(d3.min(d.value))
         })
-        .attr('y',3)
-        .attr('height',14)
+        .attrs(function(d) {
+            if (d.type=='aggregate') {
+                return {y: 3, height: 14};
+            }
+            else {
+                return {y: 8, height: 5};
+            }
+        })
         .attr('width', function(d) {
             return goalScale(Math.abs(d.value[1]-d.value[0])) - cellBuffer
         })
-        .style('opacity', 0.6)
         .style('fill', function(d) {
             return goalColorScale(d.value[0]-d.value[1])
         });
 
 
+    // Append circles for goals scored and conceded in separate groups so they can be styled separately
     tdenter.select('svg')
-        .append('circle')
+        .append('g')
+        .attr('id','scored')
+        .append('circle');
+
+    tdenter.select('svg')
+        .append('g')
+        .attr('id','conceded')
+        .append('circle');
+
+    // Now select all of the circles, existing and appended
+    allGoalCircles = td.filter( function (d) {
+        return d.vis == 'goals'
+    });
+
+    // The goals scored circles
+    allGoalCircles.select('#scored').select('circle')
         .attr('cx', function (d) {
             return goalScale(d.value[0])
         })
         .attr('cy', function (d) {
             return cellHeight/2
         })
-        .attr('class','goalScored');
+        .attr('class', 'goalScoredTotal')
+        .style('fill', function (d) {
+            if (d.type=='game') {
+                return '#fff';
+            }
+        })
 
-    tdenter.select('svg')
-        .append('circle')
+    // The goals conceded circles, style these as gray if they are equal to the goals scored
+    allGoalCircles.select('#conceded').select('circle')
         .attr('cx', function (d) {
             return goalScale(d.value[1])
         })
@@ -218,19 +313,29 @@ console.log(tdenter)
                 return 'equal';
             }
             else {
-                return 'conceded';
+                return 'concededTotal';
             }
-
+        })
+        .style('fill', function (d) {
+            if (d.type=='game') {
+                return '#fff'
+            }
         });
 
     //games bars
-    newbars = tdenter.filter( function (d) {
+    tdenter.filter( function (d) {
         return d.vis == 'gamesTotals';
     })
         .append('svg')
         .attr('width', cellWidth)
         .attr('height', cellHeight)
-        .append('rect')
+        .append('rect');
+
+    newBars = td.filter( function (d) {
+        return d.vis == 'gamesTotals';
+    });
+
+    newBars.select('svg').select('rect')
         .attr('height',cellHeight)
         .attr('width', function (d) {
             return(gameScale(d.value))
@@ -240,16 +345,28 @@ console.log(tdenter)
         });
 
     //text columns
-    tdenter.filter(function (d) {
+    td.filter(function (d) {
         return d.vis == 'teamText';
     })
         .text(function (d) {
-            return d.value
+            if ( d.type == 'aggregate') {
+                return d.value;
+            }
+            else {
+                return 'x'+d.value;
+            }
         })
-        .style('color','#317f19')
+        .style( 'color', function(d) {
+            if( d.type == 'aggregate') {
+                return '#317f19';
+            }
+            else {
+                return '#b1b1b1';
+            }
+        })
         .style('font-weight', 'bold');
 
-    tdenter.filter(function (d) {
+    td.filter(function (d) {
         return d.vis == 'roundText';
     })
         .text(function (d) {
@@ -257,25 +374,25 @@ console.log(tdenter)
         })
         .style('font-weight', 'bold');
 
-    barText = tdenter.filter(function (d) {
+    tdenter.filter(function (d) {
         return d.vis == 'gamesTotals'
     })
         .select('svg')
-        .append('text')
+        .append('text');
+
+    barsText = td.filter( function (d) {
+        return d.vis =='gamesTotals'
+    });
+
+    barsText.select('svg').select('text')
+        .attr('class','barText')
         .text(function (d) {
             return d.value;
         })
-        .attr('class','barText')
         .attr('y',14)
         .attr('x', function (d) {
             return gameScale(d.value);
-        })
-        .style('font-weight','bold')
-        .style('color','#ffffff');
-
-    td = tdenter.merge(td);
-    console.log(td)
-
+        });
 };
 
 /**
@@ -286,6 +403,12 @@ function collapseList() {
 
     // ******* TODO: PART IV *******
 
+    for (i=0; i<tableElements.length; i++) {
+        while (tableElements[i].value.type == 'game') {
+            console.log('hello world')
+            tableElements.splice(i, 1);
+        }
+    }
 
 }
 
@@ -297,16 +420,23 @@ function updateList(i) {
 
     // ******* TODO: PART IV *******
 
+    console.log(tableElements[i])
     //splice game information for selected team
-
-    tableElements = teamData.slice();
-    t = teamData[i].value.games;
-    tableElements.splice.apply(tableElements, [i+1, 0].concat(t))
-
+    if (tableElements[i+1].value.type=='game') {
+        collapseList();
+    }
+    else {
+        str = tableElements[i].key;
+        collapseList();
+        j = 0;
+        while (tableElements[j].key != str) {
+            j++
+        }
+        t = tableElements[j].value.games;
+        tableElements.splice.apply(tableElements, [j + 1, 0].concat(t));
+    }
 
     updateTable();
-
-
 }
 
 /**
@@ -317,6 +447,17 @@ function updateList(i) {
 function createTree(treeData) {
 
     // ******* TODO: PART VI *******
+
+id = treeData.id.slice();
+
+    console.log(id);
+
+
+    // var root = d3.stratify(treeData);
+    //
+    // h = d3.hierarchy(root);
+    //
+    // d3.tree(h);
 
 
 };
