@@ -448,10 +448,60 @@ function createTree(treeData) {
 
     // ******* TODO: PART VI *******
 
-id = treeData.id.slice();
+    var treemap = d3.tree()
+        .size([900, 500]);
 
-    console.log(id);
+    treeData.forEach( function (d,i) {
+        if (d.ParentGame) {
+            treeData[i].parentId = treeData[d.ParentGame].id;
+        }
+        else {
+            treeData[i].parentId = null;
+        };
+    });
 
+    var root = d3.stratify()(treeData),
+        tree = d3.tree(root),
+        nodes = d3.hierarchy(treeData, function(d) {
+            return d.children;
+        });
+
+    nodes = treemap(nodes);
+
+    var g = d3.select('#tree');
+    var link = g.selectAll(".link")
+        .data( nodes.descendants().slice(1))
+        .enter().append("path")
+        .attr("class", "link")
+        .attr("d", function(d) {
+            return "M" + d.y + "," + d.x
+                + "C" + (d.y + d.parent.y) / 2 + "," + d.x
+                + " " + (d.y + d.parent.y) / 2 + "," + d.parent.x
+                + " " + d.parent.y + "," + d.parent.x;
+        });
+
+    console.log(link)
+
+    var node = g.selectAll(".node")
+        .data(nodes.descendants())
+        .enter().append("g")
+        .attr("class", function(d) {
+            return "node" +
+                (d.children ? " node--internal" : " node--leaf"); })
+        .attr("transform", function(d) {
+            return "translate(" + d.y + "," + d.x + ")"; })
+
+    node.append("circle")
+        .attr("r", 10);
+
+    node.append("text")
+        .attr("dy", ".35em")
+        .attr("x", function(d) { return d.children ? -13 : 13; })
+        .style("text-anchor", function(d) {
+            return d.children ? "end" : "start"; })
+        .text(function(d) { return d.data.name; })
+
+    console.log(g)
 
     // var root = d3.stratify(treeData);
     //
